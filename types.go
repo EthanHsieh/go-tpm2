@@ -155,7 +155,20 @@ func (a HashAlgorithmId) GetHash() crypto.Hash {
 
 // Supported determines if the TPM digest algorithm has an equivalent go crypto.Hash.
 func (a HashAlgorithmId) Supported() bool {
-	return a.GetHash() != crypto.Hash(0)
+	switch a {
+	case HashAlgorithmSHA1:
+	case HashAlgorithmSHA256:
+	case HashAlgorithmSHA384:
+	case HashAlgorithmSHA512:
+	case HashAlgorithmSM3_256:
+	case HashAlgorithmSHA3_256:
+	case HashAlgorithmSHA3_384:
+	case HashAlgorithmSHA3_512:
+	default:
+		return false
+	}
+
+	return true
 }
 
 // Available determines if the TPM digest algorithm has an equivalent go crypto.Hash
@@ -172,7 +185,26 @@ func (a HashAlgorithmId) NewHash() hash.Hash {
 
 // Size returns the size of the algorithm. It will panic if HashAlgorithmId.Supported returns false.
 func (a HashAlgorithmId) Size() int {
-	return a.GetHash().Size()
+	switch a {
+	case HashAlgorithmSHA1:
+		return 20
+	case HashAlgorithmSHA256:
+		return 32
+	case HashAlgorithmSHA384:
+		return 48
+	case HashAlgorithmSHA512:
+		return 64
+	case HashAlgorithmSM3_256:
+		return 32
+	case HashAlgorithmSHA3_256:
+		return 32
+	case HashAlgorithmSHA3_384:
+		return 48
+	case HashAlgorithmSHA3_512:
+		return 64
+	default:
+		panic("unknown hash algorithm")
+	}
 }
 
 // SymAlgorithmId corresponds to the TPMI_ALG_SYM type
@@ -188,21 +220,28 @@ func (a SymAlgorithmId) Available() bool {
 // is no registered go implementation of the cipher or the algorithm does not correspond
 // to a symmetric cipher.
 func (a SymAlgorithmId) BlockSize() int {
-	c, ok := symmetricAlgs[a]
-	if !ok {
-		panic("unsupported cipher")
+	switch a {
+	case SymAlgorithmTDES:
+		return 8
+	case SymAlgorithmAES:
+		return 16
+	case SymAlgorithmSM4:
+		return 16
+	case SymAlgorithmCamellia:
+		return 16
+	default:
+		panic("invalid symmetric algorithm")
 	}
-	return c.blockSize
 }
 
 // NewCipher constructs a new symmetric cipher with the supplied key, if there is a go
 // implementation registered.
 func (a SymAlgorithmId) NewCipher(key []byte) (cipher.Block, error) {
-	c, ok := symmetricAlgs[a]
+	fn, ok := symmetricAlgs[a]
 	if !ok {
 		return nil, errors.New("unavailable cipher")
 	}
-	return c.fn(key)
+	return fn(key)
 }
 
 // SymObjectAlgorithmId corresponds to the TPMI_ALG_SYM_OBJECT type
@@ -213,9 +252,8 @@ func (a SymObjectAlgorithmId) Available() bool {
 	return SymAlgorithmId(a).Available()
 }
 
-// BlockSize indicates the block size of the symmetric cipher. This will panic if there
-// is no registered go implementation of the cipher or the algorithm does not correspond
-// to a symmetric cipher.
+// BlockSize indicates the block size of the symmetric cipher. This will panic if the
+// algorithm does not correspond to a symmetric cipher.
 func (a SymObjectAlgorithmId) BlockSize() int {
 	return SymAlgorithmId(a).BlockSize()
 }
